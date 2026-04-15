@@ -1,4 +1,8 @@
 package com.navaja.arqhexagonal.domain.model;
 
-public class User {
+public record User(
+        Long id,
+        String firstName,
+        String lastName
+) {
 }

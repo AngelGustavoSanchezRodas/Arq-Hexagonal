@@ -1,4 +1,8 @@
 package com.navaja.arqhexagonal.infrastructure.controller.dto;
 
-public class UserResponse {
+public record UserResponse(
+        Long id,
+        String firsName,
+        String lastName
+) {
 }

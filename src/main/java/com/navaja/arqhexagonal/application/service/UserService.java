@@ -6,11 +6,11 @@ import com.navaja.arqhexagonal.domain.model.User;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserUseService implements CreateUserUseCase {
+public class UserService implements CreateUserUseCase {
 
     private final UserRepositoryPort userRepositoryPort;
 
-    public UserUseService(UserRepositoryPort userRepositoryPort) {
+    public UserService(UserRepositoryPort userRepositoryPort) {
         this.userRepositoryPort = userRepositoryPort;
     }
 
