@@ -1,3 +1,27 @@
 spring:
   application:
-    name: ArqHexagonal
+    name: NavajaGtBackend
+  datasource:
+    # CORRECCIÓN TÉCNICA: URL limpia, sin el usuario ni la contraseña mezclados
+    url: ${DB_URL:jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres}
+    username: ${DB_USERNAME:postgres.hbivekcxiphgghcahqzp}
+    password: ${DB_PASSWORD:TrumPutinLove1!}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      repositories:
+        enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:NavajaGtBackendJwtSecretKey1234567890123456}
+    expiration-millis: ${JWT_EXPIRATION_MILLIS:86400000}
+  cache:
+    shortcode-ttl-hours: 24

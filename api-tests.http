@@ -1,0 +1,42 @@
+### Variables
+@baseUrl = http://localhost:8080
+@shortcode = abc1234
+@jwt = Bearer YOUR_JWT_TOKEN_HERE
+
+### 0) Register user
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "contrasena": "Password123!"
+}
+
+### 1) Login to get JWT
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "contrasena": "Password123!"
+}
+
+### 2) Create link
+POST {{baseUrl}}/api/core/links/create/
+Content-Type: application/json
+
+{
+  "codigoCorto": "",
+  "urlOriginal": "https://example.com",
+  "esDinamico": false
+}
+
+### 3) Redirect by shortcode
+# Tip: disable automatic redirects in the REST Client if you want to inspect the 302 response.
+GET {{baseUrl}}/{{shortcode}}
+
+### 4) Management list (JWT protected)
+GET {{baseUrl}}/api/management/links/list/
+Authorization: {{jwt}}
+Accept: application/json
+

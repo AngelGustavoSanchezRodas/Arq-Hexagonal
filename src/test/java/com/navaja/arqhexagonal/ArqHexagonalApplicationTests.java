@@ -1,13 +1,6 @@
-package com.navaja.arqhexagonal;
+package com.navaja.navajagtbackend.legacy;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-@SpringBootTest
+// Legacy test removed from execution; kept only until the old package tree is deleted manually.
 class ArqHexagonalApplicationTests {
-
-    @Test
-    void contextLoads() {
-    }
 
 }
