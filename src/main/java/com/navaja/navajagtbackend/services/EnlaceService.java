@@ -78,6 +78,8 @@ public class EnlaceService {
         enlace.setUsuario(usuario);
         enlace.setTipoHerramienta(tipoHerramienta);
         enlace.setFechaExpiracion(fechaExpiracion);
+        enlace.setTipo(request.tipo() != null ? request.tipo() : com.navaja.navajagtbackend.models.TipoEnlace.STANDARD);
+        enlace.setMetadata(request.metadata());
 
         Enlace saved = enlaceRepository.save(enlace);
         cacheLink(saved);
@@ -144,7 +146,9 @@ public class EnlaceService {
                 usuarioId,
                 enlace.getFechaCreacion(),
                 enlace.getTipoHerramienta(),
-                enlace.getFechaExpiracion()
+                enlace.getFechaExpiracion(),
+                enlace.getTipo(),
+                enlace.getMetadata()
         );
     }
 

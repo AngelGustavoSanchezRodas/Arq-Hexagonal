@@ -39,6 +39,15 @@ public class ManejadorExcepcionesGlobal {
         ));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @SuppressWarnings("unused")
+    public ResponseEntity<ErrorSimpleResponse> handleIllegalArgument(IllegalArgumentException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorSimpleResponse(
+                "BAD_REQUEST",
+                exception.getMessage() == null ? "Solicitud invalida" : exception.getMessage()
+        ));
+    }
+
     public record ErrorPaywallResponse(String error, String message, String details) {
     }
 
