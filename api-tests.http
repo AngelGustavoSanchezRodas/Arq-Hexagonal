@@ -28,7 +28,8 @@ Content-Type: application/json
 {
   "codigoCorto": "",
   "urlOriginal": "https://example.com",
-  "esDinamico": false
+  "esDinamico": false,
+  "tipoHerramienta": "QR"
 }
 
 ### 3) Redirect by shortcode

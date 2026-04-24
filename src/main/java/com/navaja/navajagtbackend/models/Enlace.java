@@ -31,6 +31,12 @@ public class Enlace {
     @Column(name = "url_original", nullable = false, length = 2048)
     private String urlOriginal;
 
+    @Column(name = "tipo_herramienta", nullable = false, length = 50)
+    private String tipoHerramienta;
+
+    @Column(name = "fecha_expiracion")
+    private OffsetDateTime fechaExpiracion;
+
     @Column(name = "es_dinamico", nullable = false)
     private boolean esDinamico;
 
@@ -71,6 +77,22 @@ public class Enlace {
         this.urlOriginal = urlOriginal;
     }
 
+    public String getTipoHerramienta() {
+        return tipoHerramienta;
+    }
+
+    public void setTipoHerramienta(String tipoHerramienta) {
+        this.tipoHerramienta = tipoHerramienta;
+    }
+
+    public OffsetDateTime getFechaExpiracion() {
+        return fechaExpiracion;
+    }
+
+    public void setFechaExpiracion(OffsetDateTime fechaExpiracion) {
+        this.fechaExpiracion = fechaExpiracion;
+    }
+
     public boolean isEsDinamico() {
         return esDinamico;
     }
@@ -107,6 +129,9 @@ public class Enlace {
     void prePersist() {
         if (fechaCreacion == null) {
             fechaCreacion = OffsetDateTime.now();
+        }
+        if (tipoHerramienta == null || tipoHerramienta.isBlank()) {
+            tipoHerramienta = "QR";
         }
     }
 }

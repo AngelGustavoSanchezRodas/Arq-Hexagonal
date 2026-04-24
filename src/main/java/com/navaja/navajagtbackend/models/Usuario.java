@@ -2,6 +2,8 @@ package com.navaja.navajagtbackend.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -26,6 +28,10 @@ public class Usuario {
 
     @Column(name = "contrasena", nullable = false, length = 255)
     private String contrasena;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan", nullable = false, length = 20)
+    private PlanUsuario plan;
 
     @Column(name = "fecha_registro", nullable = false)
     private OffsetDateTime fechaRegistro;
@@ -60,6 +66,14 @@ public class Usuario {
         this.contrasena = contrasena;
     }
 
+    public PlanUsuario getPlan() {
+        return plan;
+    }
+
+    public void setPlan(PlanUsuario plan) {
+        this.plan = plan;
+    }
+
     public OffsetDateTime getFechaRegistro() {
         return fechaRegistro;
     }
@@ -80,6 +94,9 @@ public class Usuario {
     void prePersist() {
         if (fechaRegistro == null) {
             fechaRegistro = OffsetDateTime.now();
+        }
+        if (plan == null) {
+            plan = PlanUsuario.FREE;
         }
     }
 }

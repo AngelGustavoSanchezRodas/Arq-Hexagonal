@@ -2,20 +2,30 @@ package com.navaja.navajagtbackend.services;
 
 import com.navaja.navajagtbackend.dto.CrearEnlaceRequest;
 import com.navaja.navajagtbackend.dto.EnlaceResponse;
+import com.navaja.navajagtbackend.exceptions.AccesoDenegadoException;
+import com.navaja.navajagtbackend.exceptions.AliasEnUsoException;
 import com.navaja.navajagtbackend.models.Enlace;
+import com.navaja.navajagtbackend.models.PlanUsuario;
 import com.navaja.navajagtbackend.models.Usuario;
 import com.navaja.navajagtbackend.repositories.EnlaceRepository;
 import com.navaja.navajagtbackend.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.text.Normalizer;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class EnlaceService {
@@ -27,6 +37,7 @@ public class EnlaceService {
     private final StringRedisTemplate redisTemplate;
     private final ShortcodeGenerator shortcodeGenerator;
     private final ClicAsyncService clicAsyncService;
+    private final QuotaService quotaService;
     private final Duration linkCacheTtl;
 
     public EnlaceService(
@@ -35,6 +46,7 @@ public class EnlaceService {
             StringRedisTemplate redisTemplate,
             ShortcodeGenerator shortcodeGenerator,
             ClicAsyncService clicAsyncService,
+            QuotaService quotaService,
             @Value("${app.cache.shortcode-ttl-hours:24}") long cacheTtlHours
     ) {
         this.enlaceRepository = enlaceRepository;
@@ -42,23 +54,21 @@ public class EnlaceService {
         this.redisTemplate = redisTemplate;
         this.shortcodeGenerator = shortcodeGenerator;
         this.clicAsyncService = clicAsyncService;
+        this.quotaService = quotaService;
         this.linkCacheTtl = Duration.ofHours(cacheTtlHours);
     }
 
     @Transactional
     public EnlaceResponse crearEnlace(CrearEnlaceRequest request) {
-        String codigoCorto = StringUtils.hasText(request.codigoCorto())
-                ? request.codigoCorto().trim()
-                : generateUniqueShortcode();
+        Usuario usuario = obtenerUsuarioAutenticado();
+        String codigoCorto = resolverCodigoCorto(request, usuario);
+        String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
 
-        if (enlaceRepository.existsByCodigoCorto(codigoCorto)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El codigo corto ya existe");
-        }
-
-        Usuario usuario = null;
-        if (request.usuarioId() != null) {
-            usuario = usuarioRepository.findById(request.usuarioId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        OffsetDateTime fechaExpiracion = null;
+        if (usuario != null) {
+            quotaService.verificarLimite(usuario, tipoHerramienta);
+        } else {
+            fechaExpiracion = OffsetDateTime.now().plusDays(30);
         }
 
         Enlace enlace = new Enlace();
@@ -66,9 +76,11 @@ public class EnlaceService {
         enlace.setUrlOriginal(request.urlOriginal());
         enlace.setEsDinamico(Boolean.TRUE.equals(request.esDinamico()));
         enlace.setUsuario(usuario);
+        enlace.setTipoHerramienta(tipoHerramienta);
+        enlace.setFechaExpiracion(fechaExpiracion);
 
         Enlace saved = enlaceRepository.save(enlace);
-        cacheLink(saved.getCodigoCorto(), saved.getUrlOriginal());
+        cacheLink(saved);
 
         return toResponse(saved);
     }
@@ -86,23 +98,32 @@ public class EnlaceService {
     public String resolverUrlOriginal(String shortcode, String direccionIp, String userAgent) {
         String cacheKey = CACHE_PREFIX + shortcode;
         String urlOriginal = redisTemplate.opsForValue().get(cacheKey);
-
-        if (urlOriginal != null) {
-            enlaceRepository.findByCodigoCorto(shortcode)
-                    .ifPresent(enlace -> clicAsyncService.registrarClicAsync(enlace.getId(), direccionIp, userAgent));
-            return urlOriginal;
-        }
-
         Enlace enlace = enlaceRepository.findByCodigoCorto(shortcode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode no encontrado"));
 
-        cacheLink(shortcode, enlace.getUrlOriginal());
+        if (estaExpirado(enlace)) {
+            redisTemplate.delete(cacheKey);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode no encontrado");
+        }
+
+        if (urlOriginal != null) {
+            clicAsyncService.registrarClicAsync(enlace.getId(), direccionIp, userAgent);
+            return urlOriginal;
+        }
+
+        cacheLink(enlace);
         clicAsyncService.registrarClicAsync(enlace.getId(), direccionIp, userAgent);
         return enlace.getUrlOriginal();
     }
 
-    private void cacheLink(String shortcode, String urlOriginal) {
-        redisTemplate.opsForValue().set(CACHE_PREFIX + shortcode, urlOriginal, linkCacheTtl);
+    private void cacheLink(Enlace enlace) {
+        Duration ttl = enlace.getFechaExpiracion() != null
+                ? Duration.between(OffsetDateTime.now(), enlace.getFechaExpiracion())
+                : linkCacheTtl;
+
+        if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+            redisTemplate.opsForValue().set(CACHE_PREFIX + enlace.getCodigoCorto(), enlace.getUrlOriginal(), ttl);
+        }
     }
 
     private String generateUniqueShortcode() {
@@ -121,8 +142,68 @@ public class EnlaceService {
                 enlace.getUrlOriginal(),
                 enlace.isEsDinamico(),
                 usuarioId,
-                enlace.getFechaCreacion()
+                enlace.getFechaCreacion(),
+                enlace.getTipoHerramienta(),
+                enlace.getFechaExpiracion()
         );
     }
-}
 
+    private Usuario obtenerUsuarioAutenticado() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetails userDetails) {
+            return usuarioRepository.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario autenticado no encontrado"));
+        }
+
+        return null;
+    }
+
+    private boolean estaExpirado(Enlace enlace) {
+        return enlace.getFechaExpiracion() != null && enlace.getFechaExpiracion().isBefore(OffsetDateTime.now());
+    }
+
+    private String normalizarTipoHerramienta(String tipoHerramienta) {
+        return StringUtils.hasText(tipoHerramienta) ? tipoHerramienta.trim().toUpperCase() : "QR";
+    }
+
+    private String resolverCodigoCorto(CrearEnlaceRequest request, Usuario usuario) {
+        if (!StringUtils.hasText(request.alias())) {
+            return generateUniqueShortcode();
+        }
+
+        if (usuario == null || usuario.getPlan() != PlanUsuario.PREMIUM) {
+            throw new AccesoDenegadoException();
+        }
+
+        String aliasLimpio = limpiarAlias(request.alias());
+        if (!StringUtils.hasText(aliasLimpio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alias invalido");
+        }
+
+        if (enlaceRepository.existsByCodigoCorto(aliasLimpio)) {
+            throw new AliasEnUsoException();
+        }
+
+        return aliasLimpio;
+    }
+
+    private String limpiarAlias(String alias) {
+        String sinAcentos = Normalizer.normalize(alias, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        String normalizado = sinAcentos.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "-");
+        String limpio = normalizado
+                .replaceAll("[^a-z0-9-]", "")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-+|-+$", "");
+
+        if (limpio.length() > 50) {
+            return limpio.substring(0, 50);
+        }
+        return limpio;
+    }
+}

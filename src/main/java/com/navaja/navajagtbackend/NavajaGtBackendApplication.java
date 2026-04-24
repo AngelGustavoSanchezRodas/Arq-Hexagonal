@@ -3,9 +3,11 @@ package com.navaja.navajagtbackend;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @EnableAsync
+@EnableScheduling
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = "com.navaja.navajagtbackend.repositories")
 public class NavajaGtBackendApplication {

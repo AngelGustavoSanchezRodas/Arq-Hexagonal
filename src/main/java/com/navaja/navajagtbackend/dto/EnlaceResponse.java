@@ -8,7 +8,9 @@ public record EnlaceResponse(
         String urlOriginal,
         boolean esDinamico,
         Long usuarioId,
-        OffsetDateTime fechaCreacion
+        OffsetDateTime fechaCreacion,
+        String tipoHerramienta,
+        OffsetDateTime fechaExpiracion
 ) {
 }
 

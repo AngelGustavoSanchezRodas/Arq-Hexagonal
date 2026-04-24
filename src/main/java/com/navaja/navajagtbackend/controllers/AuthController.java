@@ -4,6 +4,7 @@ import com.navaja.navajagtbackend.dto.LoginRequest;
 import com.navaja.navajagtbackend.dto.LoginResponse;
 import com.navaja.navajagtbackend.dto.RegistroRequest;
 import com.navaja.navajagtbackend.models.Usuario;
+import com.navaja.navajagtbackend.models.PlanUsuario;
 import com.navaja.navajagtbackend.repositories.UsuarioRepository;
 import com.navaja.navajagtbackend.security.ServicioJwt;
 import jakarta.validation.Valid;
@@ -39,6 +40,7 @@ public class AuthController {
         Usuario usuario = new Usuario();
         usuario.setEmail(request.email());
         usuario.setContrasena(passwordEncoder.encode(request.contrasena()));
+        usuario.setPlan(PlanUsuario.FREE);
         usuarioRepository.save(usuario);
 
         return ResponseEntity.status(HttpStatus.CREATED)
