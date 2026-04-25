@@ -59,25 +59,11 @@ public class EnlaceService {
         this.linkCacheTtl = Duration.ofHours(cacheTtlHours);
     }
 
-    @Transactional
+@Transactional
     public EnlaceResponse crearEnlace(CrearEnlaceRequest request) {
         Usuario usuario = obtenerUsuarioAutenticado();
         String codigoCorto = resolverCodigoCorto(request, usuario);
         String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
-
-        // Lógica dentro de EnlaceService.java
-if (request.getTipo() == TipoEnlace.BIOLINK) {
-    // Si es un Biolink, le asignamos una URL "placeholder" interna
-    // para cumplir con la regla de la base de datos sin romper nada.
-    String placeholderUrl = "https://navaja.gt/bio/" + aliasGenerado;
-    enlace.setUrlOriginal(placeholderUrl);
-} else {
-    // Para STANDARD, WHATSAPP o MENU_QR, la URL es obligatoria
-    if (request.getUrlOriginal() == null || request.getUrlOriginal().isBlank()) {
-        throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace.");
-    }
-    enlace.setUrlOriginal(request.getUrlOriginal());
-}
 
         OffsetDateTime fechaExpiracion = null;
         if (usuario != null) {
@@ -88,7 +74,21 @@ if (request.getTipo() == TipoEnlace.BIOLINK) {
 
         Enlace enlace = new Enlace();
         enlace.setCodigoCorto(codigoCorto);
-        enlace.setUrlOriginal(request.urlOriginal());
+
+        // --- INICIO DEL PARCHE (Sintaxis de Java Records) ---
+        if (request.tipo() == TipoEnlace.BIOLINK) {
+            // Si es un Biolink, le asignamos una URL "placeholder" usando el codigoCorto
+            String placeholderUrl = "https://navaja.gt/bio/" + codigoCorto;
+            enlace.setUrlOriginal(placeholderUrl);
+        } else {
+            // Para STANDARD, WHATSAPP o MENU_QR, la URL es obligatoria
+            if (request.urlOriginal() == null || request.urlOriginal().isBlank()) {
+                throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace.");
+            }
+            enlace.setUrlOriginal(request.urlOriginal());
+        }
+        // --- FIN DEL PARCHE ---
+
         enlace.setEsDinamico(Boolean.TRUE.equals(request.esDinamico()));
         enlace.setUsuario(usuario);
         enlace.setTipoHerramienta(tipoHerramienta);
