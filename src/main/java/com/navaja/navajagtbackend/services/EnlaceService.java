@@ -6,6 +6,7 @@ import com.navaja.navajagtbackend.exceptions.AccesoDenegadoException;
 import com.navaja.navajagtbackend.exceptions.AliasEnUsoException;
 import com.navaja.navajagtbackend.models.Enlace;
 import com.navaja.navajagtbackend.models.PlanUsuario;
+import com.navaja.navajagtbackend.models.TipoEnlace;
 import com.navaja.navajagtbackend.models.Usuario;
 import com.navaja.navajagtbackend.repositories.EnlaceRepository;
 import com.navaja.navajagtbackend.repositories.UsuarioRepository;
@@ -63,6 +64,20 @@ public class EnlaceService {
         Usuario usuario = obtenerUsuarioAutenticado();
         String codigoCorto = resolverCodigoCorto(request, usuario);
         String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
+
+        // Lógica dentro de EnlaceService.java
+if (request.getTipo() == TipoEnlace.BIOLINK) {
+    // Si es un Biolink, le asignamos una URL "placeholder" interna
+    // para cumplir con la regla de la base de datos sin romper nada.
+    String placeholderUrl = "https://navaja.gt/bio/" + aliasGenerado;
+    enlace.setUrlOriginal(placeholderUrl);
+} else {
+    // Para STANDARD, WHATSAPP o MENU_QR, la URL es obligatoria
+    if (request.getUrlOriginal() == null || request.getUrlOriginal().isBlank()) {
+        throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace.");
+    }
+    enlace.setUrlOriginal(request.getUrlOriginal());
+}
 
         OffsetDateTime fechaExpiracion = null;
         if (usuario != null) {
