@@ -26,7 +26,7 @@ public class ManejadorExcepcionesGlobal {
     public ResponseEntity<ErrorSimpleResponse> handleAliasEnUso(AliasEnUsoException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorSimpleResponse(
                 "ALIAS_IN_USE",
-                "Este alias ya esta ocupado. Por favor elige otro."
+                exception.getMessage() == null ? "Este alias ya esta ocupado. Por favor elige otro." : exception.getMessage()
         ));
     }
 

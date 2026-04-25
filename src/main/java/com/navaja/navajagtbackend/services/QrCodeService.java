@@ -17,10 +17,6 @@ public class QrCodeService {
         return writeQrPng(data, width, height);
     }
 
-    public byte[] generateWifiQr(String ssid, String password, String encryptionType, int width, int height) {
-        String wifiData = "WIFI:S:%s;T:%s;P:%s;;".formatted(ssid, encryptionType, password == null ? "" : password);
-        return writeQrPng(wifiData, width, height);
-    }
 
     private byte[] writeQrPng(String data, int width, int height) {
         try {

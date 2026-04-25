@@ -2,7 +2,6 @@ spring:
   application:
     name: NavajaGtBackend
   datasource:
-    # CORRECCIÓN TÉCNICA: URL limpia, sin el usuario ni la contraseña mezclados
     url: ${DB_URL:jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres}
     username: ${DB_USERNAME:postgres.hbivekcxiphgghcahqzp}
     password: ${DB_PASSWORD:TrumPutinLove1!}
@@ -12,12 +11,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      repositories:
-        enabled: false
+
+  cache:
+    type: simple
 
 app:
   jwt:
