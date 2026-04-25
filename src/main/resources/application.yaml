@@ -25,3 +25,5 @@ app:
     expiration-millis: ${JWT_EXPIRATION_MILLIS:86400000}
   cache:
     shortcode-ttl-hours: 24
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
