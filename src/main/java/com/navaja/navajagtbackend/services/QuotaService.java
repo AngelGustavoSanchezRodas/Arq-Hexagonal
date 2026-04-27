@@ -1,5 +1,6 @@
 package com.navaja.navajagtbackend.services;
 
+import com.navaja.navajagtbackend.exceptions.AccesoDenegadoException;
 import com.navaja.navajagtbackend.exceptions.LimiteExcedidoException;
 import com.navaja.navajagtbackend.models.PlanUsuario;
 import com.navaja.navajagtbackend.models.Usuario;
@@ -16,29 +17,32 @@ public class QuotaService {
         this.enlaceRepository = enlaceRepository;
     }
 
-    public void verificarLimite(Usuario usuario, String tipoHerramienta) {
-        if (usuario == null || !StringUtils.hasText(tipoHerramienta)) {
+    public void verificarLimite(Usuario usuario, String aliasPersonalizado) {
+        if (usuario == null) {
             return;
         }
 
-        String herramienta = tipoHerramienta.trim().toUpperCase();
-        Integer limite = limiteMaximo(usuario.getPlan(), herramienta);
-        if (limite == null) {
-            return;
+        if (usuario.getPlan() == null) {
+            usuario.setPlan(PlanUsuario.FREE);
         }
 
-        long usados = enlaceRepository.countByUsuarioIdAndTipoHerramienta(usuario.getId(), herramienta);
+        if (usuario.getPlan() == PlanUsuario.FREE && StringUtils.hasText(aliasPersonalizado)) {
+            throw new AccesoDenegadoException();
+        }
+
+        long usados = enlaceRepository.countByUsuario(usuario);
+        int limite = limiteMaximo(usuario.getPlan());
         if (usados >= limite) {
-            throw new LimiteExcedidoException("Has alcanzado el límite de enlaces para tu plan");
+            throw new LimiteExcedidoException("Has alcanzado el límite de enlaces de tu plan.");
         }
     }
 
-    private Integer limiteMaximo(PlanUsuario planUsuario, String tipoHerramienta) {
+    private int limiteMaximo(PlanUsuario planUsuario) {
         PlanUsuario plan = planUsuario == null ? PlanUsuario.FREE : planUsuario;
 
-        return switch (tipoHerramienta) {
-            case "QR" -> plan == PlanUsuario.PREMIUM ? 10 : 1;
-            default -> null;
+        return switch (plan) {
+            case PREMIUM -> Integer.MAX_VALUE;
+            case FREE -> 10;
         };
     }
 }

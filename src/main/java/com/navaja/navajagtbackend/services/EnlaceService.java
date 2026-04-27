@@ -8,7 +8,9 @@ import com.navaja.navajagtbackend.models.TipoEnlace;
 import com.navaja.navajagtbackend.models.Usuario;
 import com.navaja.navajagtbackend.repositories.EnlaceRepository;
 import com.navaja.navajagtbackend.repositories.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,53 +21,43 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class EnlaceService {
 
-    private static final String CACHE_PREFIX = "shortcode:";
-
     private final EnlaceRepository enlaceRepository;
     private final UsuarioRepository usuarioRepository;
     private final ShortcodeGenerator shortcodeGenerator;
-    private final ClicAsyncService clicAsyncService;
     private final QuotaService quotaService;
-    private final Duration linkCacheTtl;
-    private final Map<String, CachedUrl> cacheEnMemoria = new ConcurrentHashMap<>();
 
     public EnlaceService(
             EnlaceRepository enlaceRepository,
             UsuarioRepository usuarioRepository,
             ShortcodeGenerator shortcodeGenerator,
-            ClicAsyncService clicAsyncService,
-            QuotaService quotaService,
-            @Value("${app.cache.shortcode-ttl-hours:24}") long cacheTtlHours
+            QuotaService quotaService
     ) {
         this.enlaceRepository = enlaceRepository;
         this.usuarioRepository = usuarioRepository;
         this.shortcodeGenerator = shortcodeGenerator;
-        this.clicAsyncService = clicAsyncService;
         this.quotaService = quotaService;
-        this.linkCacheTtl = Duration.ofHours(cacheTtlHours);
     }
 
-@Transactional
+    @Transactional
     public EnlaceResponse crearEnlace(CrearEnlaceRequest request) {
         Usuario usuario = obtenerUsuarioAutenticado();
-        String codigoCorto = resolverCodigoCorto(request);
+        String aliasPersonalizado = request.alias();
         String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
 
         OffsetDateTime fechaExpiracion = null;
         if (usuario != null) {
-            quotaService.verificarLimite(usuario, tipoHerramienta);
+            quotaService.verificarLimite(usuario, aliasPersonalizado);
         } else {
             fechaExpiracion = OffsetDateTime.now().plusDays(30);
         }
+
+        String codigoCorto = resolverCodigoCorto(request);
 
         Enlace enlace = new Enlace();
         enlace.setCodigoCorto(codigoCorto);
@@ -91,10 +83,15 @@ public class EnlaceService {
         enlace.setTipo(request.tipo() != null ? request.tipo() : com.navaja.navajagtbackend.models.TipoEnlace.STANDARD);
         enlace.setMetadata(request.metadata());
 
-        Enlace saved = enlaceRepository.save(enlace);
-        cacheLink(saved);
+        Enlace saved = guardarEnlace(enlace);
 
         return toResponse(saved);
+    }
+
+    @Transactional
+    @CachePut(value = "enlaces", key = "#result.codigoCorto", unless = "#result == null")
+    public Enlace guardarEnlace(Enlace enlace) {
+        return enlaceRepository.save(enlace);
     }
 
     @Transactional(readOnly = true)
@@ -107,48 +104,22 @@ public class EnlaceService {
     }
 
     @Transactional(readOnly = true)
-    public String resolverUrlOriginal(String shortcode, String direccionIp, String userAgent) {
-        String cacheKey = CACHE_PREFIX + shortcode;
-        String urlOriginal = getCacheValue(cacheKey);
-        Enlace enlace = enlaceRepository.findByCodigoCorto(shortcode)
+    @Cacheable(value = "enlaces", key = "#codigoCorto", unless = "#result == null")
+    public Enlace obtenerEnlacePorCodigoCorto(String codigoCorto) {
+        Enlace enlace = enlaceRepository.findByCodigoCorto(codigoCorto)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode no encontrado"));
 
         if (estaExpirado(enlace)) {
-            cacheEnMemoria.remove(cacheKey);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode no encontrado");
         }
 
-        if (urlOriginal != null) {
-            clicAsyncService.registrarClicAsync(enlace.getId(), direccionIp, userAgent);
-            return urlOriginal;
-        }
-
-        cacheLink(enlace);
-        clicAsyncService.registrarClicAsync(enlace.getId(), direccionIp, userAgent);
-        return enlace.getUrlOriginal();
+        return enlace;
     }
 
-    private void cacheLink(Enlace enlace) {
-        Duration ttl = enlace.getFechaExpiracion() != null
-                ? Duration.between(OffsetDateTime.now(), enlace.getFechaExpiracion())
-                : linkCacheTtl;
-
-        if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-            OffsetDateTime expiresAt = OffsetDateTime.now().plus(ttl);
-            cacheEnMemoria.put(CACHE_PREFIX + enlace.getCodigoCorto(), new CachedUrl(enlace.getUrlOriginal(), expiresAt));
-        }
-    }
-
-    private String getCacheValue(String cacheKey) {
-        CachedUrl cached = cacheEnMemoria.get(cacheKey);
-        if (cached == null) {
-            return null;
-        }
-        if (cached.isExpired()) {
-            cacheEnMemoria.remove(cacheKey, cached);
-            return null;
-        }
-        return cached.urlOriginal();
+    @Transactional
+    @CacheEvict(value = "enlaces", key = "#enlace.codigoCorto")
+    public void eliminarEnlace(Enlace enlace) {
+        enlaceRepository.delete(enlace);
     }
 
     private String generateUniqueShortcode() {
@@ -209,11 +180,5 @@ public class EnlaceService {
         }
 
         return alias;
-    }
-
-    private record CachedUrl(String urlOriginal, OffsetDateTime expiresAt) {
-        private boolean isExpired() {
-            return expiresAt != null && expiresAt.isBefore(OffsetDateTime.now());
-        }
     }
 }

@@ -13,44 +13,40 @@ public class ManejadorExcepcionesGlobal {
 
     @ExceptionHandler(LimiteExcedidoException.class)
     @SuppressWarnings("unused")
-    public ResponseEntity<ErrorPaywallResponse> handleLimiteExcedido(LimiteExcedidoException exception) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorPaywallResponse(
-                "QUOTA_EXCEEDED",
-                "Has alcanzado el limite de tu plan actual.",
-                "Actualiza a Premium para continuar creando."
+    public ResponseEntity<ErrorResponse> handleLimiteExcedido(LimiteExcedidoException exception) {
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(new ErrorResponse(
+                "LIMITE_EXCEDIDO",
+                exception.getMessage()
         ));
     }
 
     @ExceptionHandler(AliasEnUsoException.class)
     @SuppressWarnings("unused")
-    public ResponseEntity<ErrorSimpleResponse> handleAliasEnUso(AliasEnUsoException exception) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorSimpleResponse(
-                "ALIAS_IN_USE",
-                exception.getMessage() == null ? "Este alias ya esta ocupado. Por favor elige otro." : exception.getMessage()
+    public ResponseEntity<ErrorResponse> handleAliasEnUso(AliasEnUsoException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(
+                "ALIAS_EN_USO",
+                exception.getMessage()
         ));
     }
 
     @ExceptionHandler(AccesoDenegadoException.class)
     @SuppressWarnings("unused")
-    public ResponseEntity<ErrorSimpleResponse> handleAccesoDenegado(AccesoDenegadoException exception) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorSimpleResponse(
-                "PREMIUM_FEATURE",
-                "Mejora tu plan para personalizar tus enlaces."
+    public ResponseEntity<ErrorResponse> handleAccesoDenegado(AccesoDenegadoException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(
+                "REQUIERE_PREMIUM",
+                exception.getMessage()
         ));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     @SuppressWarnings("unused")
-    public ResponseEntity<ErrorSimpleResponse> handleIllegalArgument(IllegalArgumentException exception) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorSimpleResponse(
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(
                 "BAD_REQUEST",
                 exception.getMessage() == null ? "Solicitud invalida" : exception.getMessage()
         ));
     }
 
-    public record ErrorPaywallResponse(String error, String message, String details) {
-    }
-
-    public record ErrorSimpleResponse(String error, String message) {
+    public record ErrorResponse(String error, String message) {
     }
 }

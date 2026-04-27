@@ -2,7 +2,7 @@ package com.navaja.navajagtbackend.controllers;
 
 import com.navaja.navajagtbackend.dto.EnlaceResponse;
 import com.navaja.navajagtbackend.models.Enlace;
-import com.navaja.navajagtbackend.repositories.EnlaceRepository;
+import com.navaja.navajagtbackend.services.EnlaceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,18 +17,18 @@ import java.time.OffsetDateTime;
 @RequestMapping("/api/v1/public/enlaces")
 public class PublicLinkController {
 
-    private final EnlaceRepository enlaceRepository;
+    private final EnlaceService enlaceService;
 
-    public PublicLinkController(EnlaceRepository enlaceRepository) {
-        this.enlaceRepository = enlaceRepository;
+    public PublicLinkController(EnlaceService enlaceService) {
+        this.enlaceService = enlaceService;
     }
 
     @GetMapping("/{alias}")
     public ResponseEntity<EnlaceResponse> getPublicLink(@PathVariable String alias) {
-        Enlace enlace = enlaceRepository.findByCodigoCorto(alias)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace no encontrado"));
+        Enlace enlace = enlaceService.obtenerEnlacePorCodigoCorto(alias);
 
         if (estaExpirado(enlace)) {
+            enlaceService.eliminarEnlace(enlace);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace expirado");
         }
 

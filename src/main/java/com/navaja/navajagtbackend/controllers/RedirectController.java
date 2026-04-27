@@ -1,9 +1,8 @@
 package com.navaja.navajagtbackend.controllers;
 
 import com.navaja.navajagtbackend.models.Enlace;
-import com.navaja.navajagtbackend.models.TipoEnlace;
-import com.navaja.navajagtbackend.repositories.EnlaceRepository;
 import com.navaja.navajagtbackend.services.ClicAsyncService;
+import com.navaja.navajagtbackend.services.EnlaceService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -19,16 +18,16 @@ import java.time.OffsetDateTime;
 @RestController
 public class RedirectController {
 
-    private final EnlaceRepository enlaceRepository;
+    private final EnlaceService enlaceService;
     private final ClicAsyncService clicAsyncService;
     private final String frontendUrl;
 
     public RedirectController(
-            EnlaceRepository enlaceRepository,
+            EnlaceService enlaceService,
             ClicAsyncService clicAsyncService,
             @Value("${app.frontend.url:http://localhost:3000}") String frontendUrl
     ) {
-        this.enlaceRepository = enlaceRepository;
+        this.enlaceService = enlaceService;
         this.clicAsyncService = clicAsyncService;
         this.frontendUrl = frontendUrl;
     }
@@ -38,10 +37,10 @@ public class RedirectController {
             @PathVariable String shortcode,
             HttpServletRequest request
     ) {
-        Enlace enlace = enlaceRepository.findByCodigoCorto(shortcode)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode no encontrado"));
+        Enlace enlace = enlaceService.obtenerEnlacePorCodigoCorto(shortcode);
 
         if (estaExpirado(enlace)) {
+            enlaceService.eliminarEnlace(enlace);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortcode expirado");
         }
 
