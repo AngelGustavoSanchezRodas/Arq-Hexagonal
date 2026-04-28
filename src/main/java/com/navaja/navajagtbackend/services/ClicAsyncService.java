@@ -33,5 +33,20 @@ public class ClicAsyncService {
         clic.setUserAgent(userAgent);
         clicRepository.save(clic);
     }
+
+    @Async
+    @Transactional
+    public void registrarClicAsync(String codigoCorto, String direccionIp, String userAgent) {
+        Enlace enlace = enlaceRepository.findByCodigoCorto(codigoCorto).orElse(null);
+        if (enlace == null) {
+            return;
+        }
+
+        Clic clic = new Clic();
+        clic.setEnlace(enlace);
+        clic.setDireccionIp(direccionIp);
+        clic.setUserAgent(userAgent);
+        clicRepository.save(clic);
+    }
 }
 
