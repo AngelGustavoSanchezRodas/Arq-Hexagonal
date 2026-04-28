@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -23,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 @Entity
-@Table(name = "enlaces")
+@Table(name = "enlaces", indexes = {@Index(name = "idx_enlace_codigo_corto", columnList = "codigo_corto", unique = true)})
 public class Enlace {
 
     @Id
@@ -62,6 +63,7 @@ public class Enlace {
 
     @OneToMany(mappedBy = "enlace", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Clic> clics = new ArrayList<>();
+
 
     public Enlace() {
     }

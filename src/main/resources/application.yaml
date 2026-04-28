@@ -21,6 +21,12 @@ spring:
   cache:
     type: simple
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
 app:
   jwt:
     secret: ${JWT_SECRET:DevSecretKeyChangeInProduction1234567890}
