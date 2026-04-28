@@ -49,6 +49,13 @@ public class EnlaceService {
         Usuario usuario = obtenerUsuarioAutenticado();
         String aliasPersonalizado = request.alias();
         String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
+        TipoEnlace tipoEnlace = request.tipo() != null ? request.tipo() : TipoEnlace.STANDARD;
+
+        if (tipoEnlace != TipoEnlace.BIOLINK) {
+            if (request.urlOriginal() == null || request.urlOriginal().isBlank()) {
+                throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace");
+            }
+        }
 
         OffsetDateTime fechaExpiracion = null;
         if (usuario != null) {
@@ -62,25 +69,19 @@ public class EnlaceService {
         Enlace enlace = new Enlace();
         enlace.setCodigoCorto(codigoCorto);
 
-        // --- INICIO DEL PARCHE (Sintaxis de Java Records) ---
         if (request.tipo() == TipoEnlace.BIOLINK) {
             // Si es un Biolink, le asignamos una URL "placeholder" usando el codigoCorto
             String placeholderUrl = "https://navaja.gt/bio/" + codigoCorto;
             enlace.setUrlOriginal(placeholderUrl);
         } else {
-            // Para STANDARD, WHATSAPP o MENU_QR, la URL es obligatoria
-            if (request.urlOriginal() == null || request.urlOriginal().isBlank()) {
-                throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace.");
-            }
             enlace.setUrlOriginal(request.urlOriginal());
         }
-        // --- FIN DEL PARCHE ---
 
         enlace.setEsDinamico(Boolean.TRUE.equals(request.esDinamico()));
         enlace.setUsuario(usuario);
         enlace.setTipoHerramienta(tipoHerramienta);
         enlace.setFechaExpiracion(fechaExpiracion);
-        enlace.setTipo(request.tipo() != null ? request.tipo() : com.navaja.navajagtbackend.models.TipoEnlace.STANDARD);
+        enlace.setTipo(tipoEnlace);
         enlace.setMetadata(request.metadata());
 
         Enlace saved = guardarEnlace(enlace);

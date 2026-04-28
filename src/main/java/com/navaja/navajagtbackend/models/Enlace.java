@@ -33,7 +33,7 @@ public class Enlace {
     @Column(name = "codigo_corto", nullable = false, unique = true, length = 50)
     private String codigoCorto;
 
-    @Column(name = "url_original", nullable = false, length = 2048)
+    @Column(name = "url_original", nullable = true, length = 2048)
     private String urlOriginal;
 
     @Column(name = "tipo_herramienta", nullable = false, length = 50)
