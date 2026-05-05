@@ -1,8 +1,10 @@
 package com.navaja.navajagtbackend.controllers;
 
 import com.navaja.navajagtbackend.dto.OpenGraphData;
+import com.navaja.navajagtbackend.dto.QrGenerateRequest;
 import com.navaja.navajagtbackend.services.OpenGraphService;
 import com.navaja.navajagtbackend.services.QrCodeService;
+import jakarta.validation.Valid;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +53,18 @@ public class ToolsController {
     public ResponseEntity<OpenGraphData> getOpenGraph(@RequestParam String url) {
         validateHttpUri(url);
         return ResponseEntity.ok(openGraphService.extract(url));
+    }
+
+    @PostMapping("/qr/generate")
+    public ResponseEntity<byte[]> generatePremiumQr(
+            @RequestParam(required = false) String usuarioId,
+            @Valid @RequestBody QrGenerateRequest request
+    ) {
+        byte[] image = qrCodeService.generarQrPremium(request, usuarioId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .body(image);
     }
 
     @PostMapping(value = "/convert-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

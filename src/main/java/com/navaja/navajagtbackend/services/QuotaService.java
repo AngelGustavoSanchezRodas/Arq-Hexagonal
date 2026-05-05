@@ -5,6 +5,7 @@ import com.navaja.navajagtbackend.exceptions.LimiteExcedidoException;
 import com.navaja.navajagtbackend.models.PlanUsuario;
 import com.navaja.navajagtbackend.models.Usuario;
 import com.navaja.navajagtbackend.repositories.EnlaceRepository;
+import com.navaja.navajagtbackend.repositories.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -12,9 +13,11 @@ import org.springframework.util.StringUtils;
 public class QuotaService {
 
     private final EnlaceRepository enlaceRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public QuotaService(EnlaceRepository enlaceRepository) {
+    public QuotaService(EnlaceRepository enlaceRepository, UsuarioRepository usuarioRepository) {
         this.enlaceRepository = enlaceRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public void verificarLimite(Usuario usuario, String aliasPersonalizado) {
@@ -35,6 +38,23 @@ public class QuotaService {
         if (usados >= limite) {
             throw new LimiteExcedidoException("Has alcanzado el límite de enlaces de tu plan.");
         }
+    }
+
+    public boolean validarPlanPremium(String usuarioId) {
+        if (!StringUtils.hasText(usuarioId)) {
+            return false;
+        }
+
+        long id;
+        try {
+            id = Long.parseLong(usuarioId);
+        } catch (NumberFormatException exception) {
+            return false;
+        }
+
+        return usuarioRepository.findById(id)
+                .map(usuario -> usuario.getPlan() == PlanUsuario.PREMIUM)
+                .orElse(false);
     }
 
     private int limiteMaximo(PlanUsuario planUsuario) {
