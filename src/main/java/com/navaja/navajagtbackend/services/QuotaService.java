@@ -57,6 +57,17 @@ public class QuotaService {
                 .orElse(false);
     }
 
+    public void validarConversionPremium(String usuarioId, String formatoSalida) {
+        String formatoUpper = formatoSalida == null ? "" : formatoSalida.toUpperCase();
+
+        if ("WEBP".equals(formatoUpper) || "TIFF".equals(formatoUpper) ||
+            "BMP".equals(formatoUpper) || "GIF".equals(formatoUpper)) {
+            if (!validarPlanPremium(usuarioId)) {
+                throw new AccesoDenegadoException("El formato " + formatoSalida + " es exclusivo del plan PRO");
+            }
+        }
+    }
+
     private int limiteMaximo(PlanUsuario planUsuario) {
         PlanUsuario plan = planUsuario == null ? PlanUsuario.FREE : planUsuario;
 
