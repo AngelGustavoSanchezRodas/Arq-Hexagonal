@@ -41,24 +41,7 @@ public class PublicLinkController {
         return ResponseEntity.ok(toResponse(enlace));
     }
 
-    @GetMapping("/bio/{alias}")
-    public ResponseEntity<EnlaceResponse> getBioProfile(@PathVariable String alias, HttpServletRequest request) {
-        Enlace enlace = enlaceService.obtenerEnlacePorCodigoCorto(alias);
-        if (enlace == null) {
-            throw new EnlaceNoEncontradoException();
-        }
-
-        if (enlace.getTipo() != TipoEnlace.BIOLINK) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este alias no pertenece a un Biolink");
-        }
-
-        String ip = request.getRemoteAddr();
-        String userAgent = request.getHeader("User-Agent");
-        // registrar analitica sin redirigir
-        clicAsyncService.registrarClicAsync(alias, ip, userAgent);
-
-        return ResponseEntity.ok(toResponse(enlace));
-    }
+    // Biolink endpoints removed as part of domain purge.
 
     private EnlaceResponse toResponse(Enlace enlace) {
         return new EnlaceResponse(

@@ -51,10 +51,8 @@ public class EnlaceService {
         String tipoHerramienta = normalizarTipoHerramienta(request.tipoHerramienta());
         TipoEnlace tipoEnlace = request.tipo() != null ? request.tipo() : TipoEnlace.STANDARD;
 
-        if (tipoEnlace != TipoEnlace.BIOLINK) {
-            if (request.urlOriginal() == null || request.urlOriginal().isBlank()) {
-                throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace");
-            }
+        if (request.urlOriginal() == null || request.urlOriginal().isBlank()) {
+            throw new IllegalArgumentException("La URL original es obligatoria para este tipo de enlace");
         }
 
         OffsetDateTime fechaExpiracion = null;
@@ -64,18 +62,19 @@ public class EnlaceService {
             fechaExpiracion = OffsetDateTime.now().plusDays(30);
         }
 
+        if (tipoEnlace == TipoEnlace.SIGNATURE) {
+            Object templateObj = request.metadata() == null ? null : request.metadata().get("templateId");
+            String templateId = templateObj == null ? null : String.valueOf(templateObj);
+            String usuarioIdStr = usuario == null ? null : String.valueOf(usuario.getId());
+            quotaService.validarCreacionFirma(usuarioIdStr, templateId);
+        }
+
         String codigoCorto = resolverCodigoCorto(request);
 
         Enlace enlace = new Enlace();
         enlace.setCodigoCorto(codigoCorto);
 
-        if (request.tipo() == TipoEnlace.BIOLINK) {
-            // Si es un Biolink, le asignamos una URL "placeholder" usando el codigoCorto
-            String placeholderUrl = "https://navaja.gt/bio/" + codigoCorto;
-            enlace.setUrlOriginal(placeholderUrl);
-        } else {
-            enlace.setUrlOriginal(request.urlOriginal());
-        }
+        enlace.setUrlOriginal(request.urlOriginal());
 
         enlace.setEsDinamico(Boolean.TRUE.equals(request.esDinamico()));
         enlace.setUsuario(usuario);

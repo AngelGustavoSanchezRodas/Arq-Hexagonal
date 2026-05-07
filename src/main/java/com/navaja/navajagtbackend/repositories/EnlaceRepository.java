@@ -2,6 +2,7 @@ package com.navaja.navajagtbackend.repositories;
 
 import com.navaja.navajagtbackend.models.Enlace;
 import com.navaja.navajagtbackend.models.Usuario;
+import com.navaja.navajagtbackend.models.TipoEnlace;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.OffsetDateTime;
@@ -18,6 +19,8 @@ public interface EnlaceRepository extends JpaRepository<Enlace, Long> {
     long countByUsuario(Usuario usuario);
 
     long countByUsuarioIdAndTipoHerramienta(Long usuarioId, String tipoHerramienta);
+
+    long countByUsuarioIdAndTipo(Long usuarioId, TipoEnlace tipo);
 
     List<Enlace> findByFechaExpiracionBefore(OffsetDateTime fechaExpiracion);
 

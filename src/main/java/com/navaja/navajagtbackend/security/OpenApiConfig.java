@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
         info = @Info(
                 title = "Navaja GT API",
                 version = "1.0",
-                description = "API Hub de Herramientas y Biolinks - Link Shortener con múltiples tipos de redirecciones inteligentes",
+                description = "API Hub de Herramientas - Link Shortener con múltiples tipos de redirecciones inteligentes",
                 contact = @Contact(
                         name = "Navaja GT Team"
                 )

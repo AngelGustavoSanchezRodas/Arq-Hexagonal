@@ -3,6 +3,6 @@ package com.navaja.navajagtbackend.models;
 public enum TipoEnlace {
     STANDARD,
     WHATSAPP,
-    BIOLINK,
+    SIGNATURE,
     MENU_QR
 }

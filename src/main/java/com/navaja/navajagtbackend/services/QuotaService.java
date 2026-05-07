@@ -5,6 +5,8 @@ import com.navaja.navajagtbackend.exceptions.LimiteExcedidoException;
 import com.navaja.navajagtbackend.models.PlanUsuario;
 import com.navaja.navajagtbackend.models.Usuario;
 import com.navaja.navajagtbackend.repositories.EnlaceRepository;
+import com.navaja.navajagtbackend.models.TipoEnlace;
+import java.util.Set;
 import com.navaja.navajagtbackend.repositories.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -64,6 +66,39 @@ public class QuotaService {
             "BMP".equals(formatoUpper) || "GIF".equals(formatoUpper)) {
             if (!validarPlanPremium(usuarioId)) {
                 throw new AccesoDenegadoException("El formato " + formatoSalida + " es exclusivo del plan PRO");
+            }
+        }
+    }
+
+    public void validarCreacionFirma(String usuarioId, String templateId) {
+        if (templateId == null || templateId.isBlank()) {
+            throw new IllegalArgumentException("El campo templateId es obligatorio para crear una firma");
+        }
+
+        Set<String> TEMPLATES_BASICOS = Set.of("1", "2");
+
+        if (!TEMPLATES_BASICOS.contains(templateId)) {
+            if (!validarPlanPremium(usuarioId)) {
+                throw new AccesoDenegadoException("La plantilla seleccionada es exclusiva del plan PRO");
+            }
+        }
+
+        if (!java.util.Objects.isNull(usuarioId) && usuarioId.trim().length() > 0) {
+            long id;
+            try {
+                id = Long.parseLong(usuarioId);
+            } catch (NumberFormatException ex) {
+                return; // cannot evaluate quota without valid id
+            }
+
+            long firmasActivas = enlaceRepository.countByUsuarioIdAndTipo(id, TipoEnlace.SIGNATURE);
+
+            boolean esFree = usuarioRepository.findById(id)
+                    .map(usuario -> usuario.getPlan() == PlanUsuario.FREE)
+                    .orElse(true);
+
+            if (esFree && firmasActivas >= 1) {
+                throw new AccesoDenegadoException("Los usuarios gratuitos solo pueden tener 1 firma activa");
             }
         }
     }

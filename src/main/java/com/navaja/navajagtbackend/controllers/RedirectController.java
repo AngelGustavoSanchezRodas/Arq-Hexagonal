@@ -56,10 +56,7 @@ public class RedirectController {
     }
 
     private String resolverRedirect(Enlace enlace, String shortcode) {
-        return switch (enlace.getTipo()) {
-            case BIOLINK -> frontendUrl + "/bio/" + shortcode;
-            case STANDARD, WHATSAPP, MENU_QR -> enlace.getUrlOriginal();
-        };
+        return enlace.getUrlOriginal();
     }
 
     private boolean estaExpirado(Enlace enlace) {
