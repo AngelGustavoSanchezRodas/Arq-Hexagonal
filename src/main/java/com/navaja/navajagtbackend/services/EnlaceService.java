@@ -13,6 +13,7 @@ import com.navaja.navajagtbackend.repositories.UsuarioRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ public class EnlaceService {
     private final ShortcodeGenerator shortcodeGenerator;
     private final QuotaService quotaService;
     private final ClicRepository clicRepository;
+    private final CacheManager cacheManager;
     private ObjectMapper objectMapper;
 
     public EnlaceService(
@@ -44,13 +46,15 @@ public class EnlaceService {
             UsuarioRepository usuarioRepository,
             ShortcodeGenerator shortcodeGenerator,
             QuotaService quotaService,
-            ClicRepository clicRepository
+            ClicRepository clicRepository,
+            CacheManager cacheManager
     ) {
         this.enlaceRepository = enlaceRepository;
         this.usuarioRepository = usuarioRepository;
         this.shortcodeGenerator = shortcodeGenerator;
         this.quotaService = quotaService;
         this.clicRepository = clicRepository;
+        this.cacheManager = cacheManager;
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -168,6 +172,13 @@ public class EnlaceService {
 
         clicRepository.deleteByEnlaceId(enlace.getId());
         enlaceRepository.delete(enlace);
+
+        if (cacheManager != null) {
+            org.springframework.cache.Cache cache = cacheManager.getCache("enlaces");
+            if (cache != null) {
+                cache.evict(enlace.getCodigoCorto());
+            }
+        }
     }
 
     private String generateUniqueShortcode() {
